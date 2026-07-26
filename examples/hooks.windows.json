@@ -1,0 +1,60 @@
+{
+  "description": "Codex Pico Panel lifecycle hooks on Windows.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:\\path\\to\\CodexPicoPanel\\hooks\\codex_pico_hook.py",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:\\path\\to\\CodexPicoPanel\\hooks\\codex_pico_hook.py",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:\\path\\to\\CodexPicoPanel\\hooks\\codex_pico_hook.py",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:\\path\\to\\CodexPicoPanel\\hooks\\codex_pico_hook.py",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:\\path\\to\\CodexPicoPanel\\hooks\\codex_pico_hook.py",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

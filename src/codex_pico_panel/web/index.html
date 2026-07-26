@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex Pico Panel</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0b0d12;
+      color: #eef1f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 32px 20px;
+      background:
+        radial-gradient(circle at top left, #17213b 0, transparent 36%),
+        #0b0d12;
+    }
+
+    main {
+      width: min(920px, 100%);
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 38px);
+      letter-spacing: -0.03em;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid #3b4253;
+      border-radius: 999px;
+      background: #171a22;
+      color: #aeb6c7;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .badge::before {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #777f90;
+      content: "";
+    }
+
+    .badge.connected {
+      border-color: #1c714d;
+      color: #9af0c2;
+    }
+
+    .badge.connected::before {
+      background: #35d383;
+      box-shadow: 0 0 14px #35d383;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      padding: 16px;
+      border: 1px solid #282d3a;
+      border-radius: 14px;
+      background: rgba(20, 23, 31, 0.9);
+    }
+
+    .label {
+      margin-bottom: 7px;
+      color: #8c95a7;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .value {
+      overflow: hidden;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 20px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .subvalue {
+      margin-top: 6px;
+      overflow-wrap: anywhere;
+      color: #8c95a7;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .panel {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid #282d3a;
+      border-radius: 18px;
+      background: rgba(13, 15, 21, 0.9);
+    }
+
+    .key {
+      position: relative;
+      aspect-ratio: 1;
+      min-height: 84px;
+      overflow: hidden;
+      border: 1px solid #333949;
+      border-radius: 15px;
+      background: #151821;
+      transition: transform 100ms ease, border-color 100ms ease;
+    }
+
+    .key.pressed {
+      border-color: #f4f7ff;
+      transform: translateY(2px) scale(0.97);
+      box-shadow: 0 0 0 2px rgba(244, 247, 255, 0.2);
+    }
+
+    .light {
+      position: absolute;
+      inset: 0;
+      opacity: 0.72;
+    }
+
+    .key-number,
+    .state {
+      position: absolute;
+      z-index: 1;
+      text-shadow: 0 1px 4px #000;
+    }
+
+    .key-number {
+      top: 12px;
+      left: 13px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .state {
+      right: 11px;
+      bottom: 9px;
+      color: #d5dae5;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .error {
+      min-height: 22px;
+      margin: 14px 2px 0;
+      color: #ff9c9c;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .details .value {
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    footer {
+      margin-top: 10px;
+      color: #697183;
+      font-size: 12px;
+      text-align: right;
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 20px 12px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .summary { grid-template-columns: 1fr; }
+      .details { grid-template-columns: 1fr; }
+      .panel { gap: 7px; padding: 10px; }
+      .key { min-height: 64px; border-radius: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Codex Pico Panel</h1>
+      <div id="connection" class="badge">接続待ち</div>
+    </header>
+
+    <section class="summary" aria-label="接続状態">
+      <article class="card">
+        <div class="label">CDC Data Port</div>
+        <div id="port" class="value">—</div>
+      </article>
+      <article class="card">
+        <div class="label">Key Mask</div>
+        <div id="mask" class="value">0x0000</div>
+      </article>
+      <article class="card">
+        <div class="label">Pressed</div>
+        <div id="pressed" class="value">—</div>
+      </article>
+      <article class="card">
+        <div class="label">Disconnects</div>
+        <div id="disconnects" class="value">0</div>
+        <div id="last-disconnect" class="subvalue">—</div>
+      </article>
+    </section>
+
+    <section id="panel" class="panel" aria-label="16キー状態"></section>
+    <section class="details" aria-label="Codex状態">
+      <article class="card">
+        <div class="label">Active Codex Task</div>
+        <div id="context" class="value">—</div>
+      </article>
+      <article class="card">
+        <div class="label">Registered Tasks</div>
+        <div id="tasks" class="value">—</div>
+      </article>
+    </section>
+    <div id="error" class="error"></div>
+    <footer id="updated">未取得</footer>
+  </main>
+
+  <script>
+    const colors = [
+      "#11141b", "#003dff", "#00a8ce", "#00bd4a",
+      "#75bd00", "#d2bd00", "#d16a00", "#d12626",
+      "#d12670", "#bf27c9", "#722bd2", "#3b43be",
+      "#484b53", "#777b85", "#b9bdc7", "#ff3b3b"
+    ];
+
+    const panel = document.querySelector("#panel");
+    const keys = [];
+
+    for (let index = 0; index < 16; index += 1) {
+      const key = document.createElement("article");
+      key.className = "key";
+      key.innerHTML = `
+        <div class="light"></div>
+        <div class="key-number">${index.toString(16).toUpperCase()}</div>
+        <div class="state">0x0</div>
+      `;
+      panel.appendChild(key);
+      keys.push(key);
+    }
+
+    function render(status) {
+      const connection = document.querySelector("#connection");
+      connection.textContent = status.pico_connected ? "Pico接続中" : "接続待ち";
+      connection.classList.toggle("connected", status.pico_connected);
+
+      document.querySelector("#port").textContent = status.pico_port ?? "—";
+      document.querySelector("#mask").textContent = status.key_mask_hex;
+      document.querySelector("#pressed").textContent =
+        status.pressed_keys.length ? status.pressed_keys.join(", ") : "—";
+      document.querySelector("#disconnects").textContent =
+        String(status.disconnect_count ?? 0);
+      document.querySelector("#last-disconnect").textContent =
+        status.last_disconnect_reason ?? "—";
+      document.querySelector("#error").textContent =
+        status.last_error ?? "";
+
+      const context = status.codex_context ?? {};
+      document.querySelector("#context").textContent = context.thread_id
+        ? [
+            context.thread_id,
+            `phase=${context.phase ?? "unknown"}`,
+            `reasoning=${context.reasoning_effort ?? "unknown"}`,
+            `mode=${context.collaboration_mode ?? "unknown"}`
+          ].join("\n")
+        : "—";
+
+      const taskStatuses = status.task_statuses?.tasks ?? {};
+      const taskLines = Object.entries(status.task_slots ?? {})
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([slot, conversationId]) => {
+          const task = taskStatuses[conversationId] ?? {};
+          return `${slot}: ${conversationId}  ${task.phase ?? "idle"}`;
+        });
+      document.querySelector("#tasks").textContent =
+        taskLines.length ? taskLines.join("\n") : "—";
+
+      status.led_states.forEach((state, index) => {
+        const key = keys[index];
+        key.classList.toggle(
+          "pressed",
+          (status.key_mask & (1 << index)) !== 0
+        );
+        key.querySelector(".light").style.background = colors[state];
+        key.querySelector(".state").textContent =
+          `0x${state.toString(16).toUpperCase()}`;
+      });
+
+      document.querySelector("#updated").textContent =
+        `更新 ${new Date().toLocaleTimeString("ja-JP")}`;
+    }
+
+    async function refresh() {
+      try {
+        const response = await fetch("/api/status", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        render(await response.json());
+      } catch (error) {
+        const connection = document.querySelector("#connection");
+        connection.textContent = "常駐停止";
+        connection.classList.remove("connected");
+        document.querySelector("#error").textContent = String(error);
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 250);
+  </script>
+</body>
+</html>

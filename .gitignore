@@ -1,0 +1,23 @@
+# Local environments and generated state
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+build/
+dist/
+*.whl
+.runtime/
+
+# Machine-specific rollback material
+backups/
+
+# Machine-specific panel state and hook probes
+data/slots.json
+data/*.tmp
+hooks/hook-probe.jsonl

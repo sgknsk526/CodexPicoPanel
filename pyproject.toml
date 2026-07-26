@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-pico-panel"
+version = "0.1.0"
+description = "Windows host for a Codex Desktop Pico RGB keypad panel"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "sgknsk526" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial>=3.5,<4",
+    "pywinauto>=0.6.8,<0.7",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Hardware",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/sgknsk526/CodexPicoPanel"
+Repository = "https://github.com/sgknsk526/CodexPicoPanel"
+Issues = "https://github.com/sgknsk526/CodexPicoPanel/issues"
+
+[project.scripts]
+codex-pico-panel = "codex_pico_panel.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codex_pico_panel = ["web/*.html"]

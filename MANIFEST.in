@@ -1,0 +1,8 @@
+include LICENSE
+include README.md
+include README.ja.md
+recursive-include docs *.md
+recursive-include examples *.json
+recursive-include firmware *.md *.py
+recursive-include hooks *.py
+recursive-include tests *.py
