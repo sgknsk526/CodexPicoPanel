@@ -145,6 +145,16 @@ shortcutとUI Automationには対話ユーザーセッションが必要です�
 
 remote不要なら`--remote-host`を省略するか`--no-remote`を追加します。
 
+terminalまたはcommand fileのダブルクリックから常駐アプリを再起動できます。
+
+```powershell
+.\scripts\restart-resident.cmd
+```
+
+Windows loopback経由で正常終了を要求し、COMとSSHの終了を待ってから
+`\Codex Pico Panel`タスクを起動し、状態APIの復帰まで確認します。
+タスク名が異なる場合は`-TaskName`を指定してください。
+
 ## 状態ページと診断
 
 [http://127.0.0.1:48973/](http://127.0.0.1:48973/)またはBキーで開きます。COM接続、

@@ -1,10 +1,11 @@
-"""Read-only local web status server."""
+"""Local web status, hook, and control server."""
 
 from __future__ import annotations
 
 import json
 import logging
 import threading
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -79,6 +80,7 @@ def make_handler(
     events: queue.Queue[object],
     slots: TaskSlots,
     statuses: TaskStatuses,
+    shutdown_callback: Callable[[], None] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     class StatusHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
@@ -134,6 +136,27 @@ def make_handler(
 
         def do_POST(self) -> None:
             path = urlsplit(self.path).path
+
+            if path == "/api/shutdown":
+                if shutdown_callback is None:
+                    self._send(
+                        503,
+                        b"Shutdown unavailable",
+                        "text/plain; charset=utf-8",
+                    )
+                    return
+
+                self._send(
+                    202,
+                    b"",
+                    "application/json",
+                )
+                threading.Thread(
+                    target=shutdown_callback,
+                    name="shutdown-request",
+                    daemon=True,
+                ).start()
+                return
 
             if path != "/api/hooks":
                 self._send(
@@ -204,6 +227,9 @@ class StatusServer:
         statuses: TaskStatuses,
         host=DEFAULT_HOST,
         port=DEFAULT_PORT,
+        shutdown_callback: (
+            Callable[[], None] | None
+        ) = None,
     ) -> None:
         self._server = ThreadingHTTPServer(
             (host, port),
@@ -213,6 +239,7 @@ class StatusServer:
                 events,
                 slots,
                 statuses,
+                shutdown_callback,
             ),
         )
         self._thread = threading.Thread(

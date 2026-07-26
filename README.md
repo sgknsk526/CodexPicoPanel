@@ -151,6 +151,18 @@ shortcuts and UI Automation require an interactive user session.
 
 Omit `--remote-host` or add `--no-remote` when remote tasks are not needed.
 
+Restart the scheduled resident process from a terminal or by double-clicking
+the command file:
+
+```powershell
+.\scripts\restart-resident.cmd
+```
+
+The script requests a graceful shutdown through Windows loopback, waits for
+COM and SSH cleanup, starts the `\Codex Pico Panel` scheduled task, and waits
+for the status API to return. Use `-TaskName` when your scheduled task has a
+different name.
+
 ## Status and diagnostics
 
 Open [http://127.0.0.1:48973/](http://127.0.0.1:48973/) or press key B. The

@@ -1,6 +1,7 @@
 import json
 import queue
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
@@ -24,7 +25,12 @@ class StatusServerTests(unittest.TestCase):
         )
         self.statuses = TaskStatuses()
 
-    def start_server(self, runtime, panel):
+    def start_server(
+        self,
+        runtime,
+        panel,
+        shutdown_callback=None,
+    ):
         server = StatusServer(
             runtime,
             panel,
@@ -32,6 +38,7 @@ class StatusServerTests(unittest.TestCase):
             self.slots,
             self.statuses,
             port=0,
+            shutdown_callback=shutdown_callback,
         )
         server.start()
         self.addCleanup(server.stop)
@@ -113,6 +120,27 @@ class StatusServerTests(unittest.TestCase):
             urlopen(request, timeout=2)
 
         self.assertEqual(context.exception.code, 400)
+
+    def test_shutdown_api_invokes_callback(self):
+        runtime = RuntimeState()
+        panel = PanelState()
+        requested = threading.Event()
+        server = self.start_server(
+            runtime,
+            panel,
+            shutdown_callback=requested.set,
+        )
+        host, port = server.address
+        request = Request(
+            f"http://{host}:{port}/api/shutdown",
+            data=b"",
+            method="POST",
+        )
+
+        with urlopen(request, timeout=2) as response:
+            self.assertEqual(response.status, 202)
+
+        self.assertTrue(requested.wait(timeout=2))
 
 
 if __name__ == "__main__":

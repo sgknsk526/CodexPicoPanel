@@ -180,15 +180,6 @@ def main(argv: list[str] | None = None) -> int:
         events,
     )
 
-    status_server = StatusServer(
-        runtime,
-        panel,
-        events,
-        slots,
-        statuses,
-        port=args.status_port,
-    )
-
     controller = Controller(
         events,
         pico,
@@ -200,6 +191,16 @@ def main(argv: list[str] | None = None) -> int:
         statuses,
         composer_monitor,
         reasoning,
+    )
+
+    status_server = StatusServer(
+        runtime,
+        panel,
+        events,
+        slots,
+        statuses,
+        port=args.status_port,
+        shutdown_callback=controller.stop,
     )
 
     ssh_tunnel = (
