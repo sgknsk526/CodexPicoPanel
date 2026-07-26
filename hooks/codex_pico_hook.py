@@ -246,6 +246,8 @@ def stop_turn_failed(
     ):
         return False
 
+    last_tool_failed: bool | None = None
+
     try:
         with open(
             transcript_path,
@@ -289,16 +291,15 @@ def stop_turn_failed(
                     output
                 )
 
-                if (
+                last_tool_failed = (
                     match is not None
                     and int(match.group(1)) != 0
-                ):
-                    return True
+                )
 
     except OSError:
         return False
 
-    return False
+    return last_tool_failed is True
 
 def post_tool_failed(
     payload: dict[str, object],

@@ -109,12 +109,11 @@ class TaskStatuses:
             }:
                 status.phase = "thinking"
 
-                if (
+                status.turn_had_error = (
                     event.failed
                     or event.event_name
                     == "PostToolUseFailure"
-                ):
-                    status.turn_had_error = True
+                )
 
             elif event.event_name == "Stop":
                 failed = (
