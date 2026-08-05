@@ -28,6 +28,8 @@ class TaskStatus:
     reasoning_effort: str | None = None
     collaboration_mode: str | None = None
     settings_source: str | None = None
+    turn_id: str | None = None
+    status_source: str | None = None
 
 class TaskStatuses:
     def __init__(self) -> None:
@@ -90,6 +92,11 @@ class TaskStatuses:
                 status.settings_source = "hook"
 
             status.last_event = event.event_name
+
+            if event.turn_id is not None:
+                status.turn_id = event.turn_id
+
+            status.status_source = "hook"
             status.updated_at = datetime.now(
                 timezone.utc
             ).isoformat()
@@ -131,6 +138,88 @@ class TaskStatuses:
                     != self._active_conversation_id
                 )
                 status.turn_had_error = False
+
+    def reconcile_remote(
+        self,
+        conversation_id: str,
+        *,
+        state: str,
+        turn_id: str,
+        failed: bool,
+        initial: bool,
+    ) -> bool:
+        with self._lock:
+            status = self._values.setdefault(
+                conversation_id,
+                TaskStatus(),
+            )
+            was_running = status.phase in {
+                "thinking",
+                "action_required",
+            }
+            same_turn = status.turn_id == turn_id
+
+            if state == "running":
+                if (
+                    same_turn
+                    and status.phase
+                    == "action_required"
+                ):
+                    return False
+
+                changed = (
+                    status.phase != "thinking"
+                    or not same_turn
+                )
+                status.phase = "thinking"
+                status.outcome = "none"
+                status.unread = False
+                status.turn_had_error = False
+                status.last_event = (
+                    "RemoteTaskStarted"
+                )
+
+            else:
+                outcome = (
+                    "error"
+                    if failed
+                    else "success"
+                )
+                unread = (
+                    conversation_id
+                    != self._active_conversation_id
+                    and (
+                        not initial
+                        or was_running
+                    )
+                )
+                changed = (
+                    status.phase != "idle"
+                    or status.outcome != outcome
+                    or status.unread != unread
+                    or not same_turn
+                )
+                status.phase = "idle"
+                status.outcome = outcome
+                status.unread = unread
+                status.turn_had_error = False
+                status.last_event = (
+                    "RemoteTaskAborted"
+                    if state == "aborted"
+                    else "RemoteTaskComplete"
+                )
+
+            if not changed:
+                return False
+
+            status.turn_id = turn_id
+            status.status_source = (
+                "remote_rollout_ssh"
+            )
+            status.updated_at = datetime.now(
+                timezone.utc
+            ).isoformat()
+            return True
 
     def led_state(
         self,

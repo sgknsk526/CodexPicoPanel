@@ -13,6 +13,7 @@ from .codex.app_server import AppServerClient
 from .codex.composer import ComposerMonitor
 from .codex.desktop_log import CodexDesktopLog
 from .codex.reasoning import ReasoningResolver
+from .codex.remote_status import RemoteStatusResolver
 from .codex.shortcuts import CodexShortcuts
 from .controller import Controller
 from .panel_state import PanelState
@@ -127,6 +128,11 @@ def main(argv: list[str] | None = None) -> int:
     reasoning = ReasoningResolver(
         remote_host=remote_host
     )
+    remote_status = (
+        RemoteStatusResolver(remote_host)
+        if remote_host is not None
+        else None
+    )
 
     commands = [
         ["codex", "app-server"],
@@ -191,6 +197,7 @@ def main(argv: list[str] | None = None) -> int:
         statuses,
         composer_monitor,
         reasoning,
+        remote_status=remote_status,
     )
 
     status_server = StatusServer(

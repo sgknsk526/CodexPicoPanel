@@ -16,6 +16,13 @@ from .window import (
 LOGGER = logging.getLogger(__name__)
 POLL_SECONDS = 0.2
 
+COMPOSER_NAMES = {
+    "何でもできます",
+    "何でもどうぞ",
+    "Ask anything",
+}
+COMPOSER_CLASS_NAME = "ProseMirror"
+
 ComposerAction = Literal[
     "send",
     "clear",
@@ -28,23 +35,50 @@ ComposerAction = Literal[
 
 APPROVE_BUTTON_NAMES = {
     "承認",
+    "承認する",
+    "承認して続行",
     "リクエストを承認",
     "許可",
+    "許可する",
+    "許可して続行",
     "今回のみ許可",
+    "一度だけ許可",
+    "はい",
     "Approve",
+    "Approve once",
     "Approve request",
     "Allow",
     "Allow once",
+    "Allow and continue",
+    "Yes",
 }
 
 REJECT_BUTTON_NAMES = {
     "拒否",
+    "拒否する",
     "リクエストを拒否",
     "却下",
+    "許可しない",
+    "いいえ",
     "Reject",
     "Reject request",
     "Deny",
+    "Deny request",
+    "Don't allow",
+    "No",
 }
+
+DECISION_BUTTON_EXCLUDED_NAMES = {
+    "承認を依頼",
+    "Request approval",
+}
+
+DECISION_BUTTON_SUFFIX_PREFIXES = (
+    " ",
+    "(",
+    "（",
+    "[",
+)
 
 
 @dataclass(frozen=True)
@@ -91,11 +125,19 @@ class ComposerMonitor(threading.Thread):
             name = (
                 edit.element_info.name or ""
             ).strip()
+            class_names = {
+                part.strip()
+                for part in (
+                    edit.element_info.class_name or ""
+                ).split()
+                if part.strip()
+            }
 
-            if name in {
-                "何でもできます",
-                "Ask anything",
-            }:
+            if (
+                name in COMPOSER_NAMES
+                or COMPOSER_CLASS_NAME
+                in class_names
+            ):
                 return edit
 
         return None
@@ -163,14 +205,62 @@ class ComposerMonitor(threading.Thread):
             name = (
                 button.element_info.name or ""
             ).strip()
+            folded_name = name.casefold()
+
+            matches = any(
+                folded_name == candidate.casefold()
+                or any(
+                    folded_name.startswith(
+                        candidate.casefold() + suffix
+                    )
+                    for suffix in (
+                        DECISION_BUTTON_SUFFIX_PREFIXES
+                    )
+                )
+                for candidate in names
+            )
 
             if (
-                name in names
+                matches
+                and name
+                not in DECISION_BUTTON_EXCLUDED_NAMES
                 and button.is_enabled()
+                and button.is_visible()
             ):
                 return button
 
         return None
+
+    def _log_decision_button_candidates(
+        self,
+        window,
+        action: ComposerAction,
+    ) -> None:
+        candidates = []
+
+        for button in window.descendants(
+            control_type="Button"
+        ):
+            try:
+                name = (
+                    button.element_info.name or ""
+                ).strip()
+
+                if (
+                    name
+                    and button.is_enabled()
+                    and button.is_visible()
+                ):
+                    candidates.append(name)
+            except Exception:
+                continue
+
+        LOGGER.warning(
+            "No decision button for %s; "
+            "visible enabled buttons=%r",
+            action,
+            candidates[-30:],
+        )
 
     def _execute(
         self,
@@ -206,6 +296,11 @@ class ComposerMonitor(threading.Thread):
 
             if decision_button is not None:
                 decision_button.invoke()
+            else:
+                self._log_decision_button_candidates(
+                    window,
+                    action,
+                )
 
             return
 

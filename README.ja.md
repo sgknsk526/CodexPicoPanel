@@ -130,6 +130,7 @@ remote hostでは以下を行います。
 
 常駐アプリはremote loopback `127.0.0.1:48974`からWindows loopback
 `127.0.0.1:48973`へのreverse SSH tunnelを維持します。LANには公開しません。
+hookで即時更新し、取りこぼした実行状態は5秒ごとのremote rollout照合で修復します。
 
 ## ログオン時の常駐
 
