@@ -135,7 +135,8 @@ For a remote host:
 
 The resident process maintains a reverse tunnel from remote loopback
 `127.0.0.1:48974` to Windows loopback `127.0.0.1:48973`. No hook listener is
-exposed on the LAN.
+exposed on the LAN. Hooks provide immediate updates; a five-second remote
+rollout reconciliation corrects execution state when a hook event is missed.
 
 ## Start at logon
 

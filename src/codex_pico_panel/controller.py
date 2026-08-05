@@ -17,6 +17,10 @@ from .codex.reasoning import (
     ReasoningResolved,
     ReasoningResolver,
 )
+from .codex.remote_status import (
+    RemoteStatusesResolved,
+    RemoteStatusResolver,
+)
 from .codex.shortcuts import CodexShortcuts
 from .codex.window import is_codex_foreground
 from .task_slots import TaskSlots
@@ -37,12 +41,13 @@ from .runtime import RuntimeState
 FOREGROUND_POLL_SECONDS = 0.1
 REASONING_POLL_SECONDS = 0.1
 REMOTE_SETTINGS_POLL_SECONDS = 5.0
+REMOTE_STATUS_POLL_SECONDS = 5.0
 PICO_KEEPALIVE_SECONDS = 2.0
 LOGGER = logging.getLogger(__name__)
 SHORT_PRESS_SECONDS = 2.0
 
 REGISTER_HOLD_SECONDS = 1.0
-COMPOSER_HOLD_SECONDS = 0.6
+COMPOSER_HOLD_SECONDS = 0.4
 LED_OFF = 0x0
 LED_RUNNING = 0x1
 LED_SEND_READY = 0x3
@@ -86,6 +91,9 @@ class Controller:
         statuses: TaskStatuses,
         composer: ComposerMonitor,
         reasoning: ReasoningResolver,
+        remote_status: (
+            RemoteStatusResolver | None
+        ) = None,
     ) -> None:
         self.events = events
         self.pico = pico
@@ -111,9 +119,11 @@ class Controller:
             [None] * KEY_COUNT
         )
         self.reasoning = reasoning
+        self.remote_status = remote_status
         self._active_conversation_id = None
         self._next_reasoning_check = 0.0
         self._next_remote_settings_check = 0.0
+        self._next_remote_status_check = 0.0
         self._next_pico_keepalive = 0.0
 
         for conversation_id in self.slots.snapshot().values():
@@ -524,6 +534,40 @@ class Controller:
                         0xF,
                         self._plan_led_state(),
                     )
+
+            return
+
+        if isinstance(event, RemoteStatusesResolved):
+            changed = False
+
+            for snapshot in event.snapshots:
+                snapshot_changed = (
+                    self.statuses.reconcile_remote(
+                        snapshot.conversation_id,
+                        state=snapshot.state,
+                        turn_id=snapshot.turn_id,
+                        failed=snapshot.failed,
+                        initial=(
+                            snapshot.conversation_id
+                            in event.initial_ids
+                        ),
+                    )
+                )
+
+                if snapshot_changed:
+                    LOGGER.info(
+                        "Remote rollout state for %s: "
+                        "%s turn=%s failed=%s",
+                        snapshot.conversation_id,
+                        snapshot.state,
+                        snapshot.turn_id,
+                        snapshot.failed,
+                    )
+
+                changed = snapshot_changed or changed
+
+            if changed:
+                self._refresh_task_leds()
 
             return
 
@@ -988,6 +1032,28 @@ class Controller:
                 self.events,
             )
 
+    def _poll_remote_statuses(self) -> None:
+        if self.remote_status is None:
+            return
+
+        now = time.monotonic()
+
+        if now < self._next_remote_status_check:
+            return
+
+        self._next_remote_status_check = (
+            now + REMOTE_STATUS_POLL_SECONDS
+        )
+        conversation_ids = tuple(
+            self.slots.snapshot().values()
+        )
+
+        if conversation_ids:
+            self.remote_status.resolve_async(
+                conversation_ids,
+                self.events,
+            )
+
     def _reasoning_led_state(self) -> int:
         conversation_id = (
             self._active_conversation_id
@@ -1058,4 +1124,5 @@ class Controller:
             self._poll_active_task()
             self._poll_approval_response()
             self._poll_reasoning_effort()
+            self._poll_remote_statuses()
             self._poll_pico_keepalive()
